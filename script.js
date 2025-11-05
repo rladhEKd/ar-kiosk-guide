@@ -1,5 +1,5 @@
 // 1. 설정: 인식할 키워드를 이곳에 추가하거나 수정하세요.
-const TARGET_WORDS = ['버거', '디저트', '음료', '주문', '결제'];
+const TARGET_WORDS = ['버거', '음료', '주문', '결제'];
 
 // --- 이하 코드는 가급적 수정하지 마세요. ---
 
@@ -96,7 +96,7 @@ async function recognizeText() {
     // 이미지 전처리 끝
 
     const { data: { text, words } } = await worker.recognize(canvas);
-    ocrOutput.textContent = `${text}`;
+    ocrOutput.textContent = `인식된 텍스트: ${text}`;
 
     // 이전 AR 오버레이 지우기
     arOverlay.innerHTML = '';
@@ -120,3 +120,58 @@ async function recognizeText() {
         }
     });
 }
+
+// 7. 음성 인식 기능
+const voiceButton = document.getElementById('voiceButton');
+const voiceOutput = document.getElementById('voice-output');
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition;
+
+if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+    recognition.lang = 'ko-KR'; // 언어 설정: 한국어
+    recognition.continuous = false; // 연속 인식 비활성화
+    recognition.interimResults = false; // 중간 결과 비활성화
+
+    voiceButton.addEventListener('click', () => {
+        if (voiceButton.textContent === '음성인식 시작') {
+            try {
+                recognition.start();
+            } catch(e) {
+                voiceOutput.textContent = '오류: 이미 인식이 진행 중입니다.';
+            }
+        } else {
+            recognition.stop();
+        }
+    });
+
+    recognition.onstart = () => {
+        voiceButton.textContent = '음성인식 중...';
+        voiceOutput.textContent = '말씀하세요...';
+    };
+
+    recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        voiceOutput.textContent = transcript;
+
+        // TODO: 인식된 텍스트(transcript)를 분석하여 주문 처리 로직 추가
+        if (transcript.includes('버거')) {
+            console.log('사용자가 버거를 주문했습니다.');
+            // 예: ocrOutput에서 '버거'를 찾아 하이라이트
+        }
+    };
+
+    recognition.onerror = (event) => {
+        voiceOutput.textContent = `음성인식 오류: ${event.error}`;
+    };
+
+    recognition.onend = () => {
+        voiceButton.textContent = '음성인식 시작';
+    };
+
+} else {
+    voiceButton.style.display = 'none';
+    voiceOutput.textContent = '이 브라우저는 음성인식을 지원하지 않습니다.';
+}
+
