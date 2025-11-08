@@ -1,6 +1,26 @@
 // 1. 설정: 인식할 키워드를 이곳에 추가하거나 수정하세요.
 const TARGET_WORDS = ['버거', '음료', '주문', '결제'];
 
+// ===== 주문 단계(state) & 주문 정보 =====
+const STEPS = {
+    IDLE: 'IDLE',                 // 아무 것도 안 하는 기본 상태
+    MENU_CATEGORY: 'MENU_CATEGORY', // '버거' 탭 선택 단계
+    MENU_ITEM: 'MENU_ITEM',       // '불고기버거' 같은 구체 메뉴 선택
+    SET_OR_SINGLE: 'SET_OR_SINGLE', // 단품/세트 선택
+    DESSERT: 'DESSERT',           // 디저트 선택
+    DRINK: 'DRINK',               // 음료 선택
+    CONFIRM: 'CONFIRM',           // 최종 확인
+};
+
+let currentStep = STEPS.IDLE;
+
+const order = {
+    menu: null,    // 예: '불고기버거'
+    isSet: null,   // true=세트, false=단품, null=미정
+    dessert: null, // 예: '감자튀김'
+    drink: null,   // 예: '콜라'
+};
+
 // --- 이하 코드는 가급적 수정하지 마세요. ---
 
 // 2. HTML 요소 가져오기
@@ -152,26 +172,71 @@ if (SpeechRecognition) {
     };
 
     recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
+        const transcript = event.results[0][0].transcript.trim();
         voiceOutput.textContent = transcript;
-
-        // TODO: 인식된 텍스트(transcript)를 분석하여 주문 처리 로직 추가
-        if (transcript.includes('버거')) {
-            console.log('사용자가 버거를 주문했습니다.');
-            // 예: ocrOutput에서 '버거'를 찾아 하이라이트
-        }
-    };
-
-    recognition.onerror = (event) => {
-        voiceOutput.textContent = `음성인식 오류: ${event.error}`;
+    
+        // 인식된 문장을 주문 처리 로직으로 넘김
+        handleOrderIntent(transcript);
     };
 
     recognition.onend = () => {
         voiceButton.textContent = '음성인식 시작';
     };
 
+    // === 주문 의도 분석 함수 ===
+    function handleOrderIntent(text) {
+        // 공백 제거 (예: "불고기버거 세트 하나" → "불고기버거세트하나")
+        const compact = text.replace(/\s+/g, '');
+
+        // 1) 메뉴 감지
+        let detectedMenu = null;
+        if (compact.includes('불고기')) detectedMenu = '불고기버거';
+        else if (compact.includes('치즈')) detectedMenu = '치즈버거';
+        else if (compact.includes('새우')) detectedMenu = '새우버거';
+
+        // 2) 세트/단품 감지
+        let detectedIsSet = null;
+        if (compact.includes('세트')) detectedIsSet = true;
+        else if (compact.includes('단품')) detectedIsSet = false;
+
+        switch (currentStep) {
+            // 아직 주문이 시작되지 않은 상태
+            case STEPS.IDLE: {
+                if (detectedMenu) {
+                    order.menu = detectedMenu;
+                    order.isSet = detectedIsSet; // 세트/단품 안 말했으면 null 유지
+                    currentStep = STEPS.MENU_CATEGORY;
+
+                    const typeText =
+                        order.isSet === null
+                            ? '(단품/세트 미정)'
+                            : order.isSet
+                            ? '세트'
+                            : '단품';
+
+                    const msg = `▶ 주문 시작: 메뉴=${order.menu}, 종류=${typeText}, 현재 단계=${currentStep}`;
+                    console.log(msg);
+                    voiceOutput.textContent = voiceOutput.textContent + '\n' + msg;
+                } else {
+                    const msg =
+                        '어떤 메뉴를 주문하실지 잘 못 들었어요. "불고기버거 세트 하나"처럼 말해 주세요.';
+                    console.log(msg);
+                    voiceOutput.textContent = msg;
+                }
+                break;
+            }
+
+            // 나중에 DESSERT, DRINK 등 단계별 처리를 여기에 추가 예정
+            default: {
+                const msg = `현재 단계(${currentStep})에 대한 음성 처리는 아직 구현되지 않았습니다.`;
+                console.log(msg);
+                voiceOutput.textContent = msg;
+                break;
+            }
+        }
+    }
+
 } else {
     voiceButton.style.display = 'none';
     voiceOutput.textContent = '이 브라우저는 음성인식을 지원하지 않습니다.';
 }
-
