@@ -123,45 +123,45 @@ async function recognizeText() {
 // 이전 AR 오버레이 지우기
 arOverlay.innerHTML = '';
 
-let matchedCount = 0;
+    let matchedCount = 0;
 
-// 인식된 단어 위에 AR 화살표 표시
-// 🔸 현재 주문 단계에 따라 타겟 단어를 달리함
-let activeTargets = TARGET_WORDS;
+    // 인식된 단어 위에 AR 화살표 표시
+    let activeTargets = TARGET_WORDS;
 
-// 1단계: 메뉴 카테고리 선택 단계면 '버거'만 강조
-if (currentStep === STEPS.MENU_CATEGORY) {
-    activeTargets = ['버거'];  // 나중에 '치킨', '디저트' 등 추가 가능
-}
-
-words.forEach(word => {
-    const text = (word.text || '').trim();
-
-    if (activeTargets.some(target => text.includes(target))) {
-        matchedCount++;   // 몇 개 찾았는지 카운트
-
-        const div = document.createElement('div');
-        div.className = 'ar-arrow';
-        div.style.position = 'absolute';
-
-        const scaleX = video.clientWidth / video.videoWidth;
-        const scaleY = video.clientHeight / video.videoHeight;
-        div.style.left = `${word.bbox.x0 * scaleX}px`;
-        div.style.top = `${word.bbox.y0 * scaleY}px`;
-        div.style.width = `${(word.bbox.x1 - word.bbox.x0) * scaleX}px`;
-        div.style.height = `${(word.bbox.y1 - word.bbox.y0) * scaleY}px`; 
-
-        div.style.border = '2px solid red';
-        div.title = text;
-
-        arOverlay.appendChild(div);
+    // 1) 카테고리 단계: '버거' 글씨만 찾기
+    if (currentStep === STEPS.MENU_CATEGORY) {
+        activeTargets = ['버거'];
     }
-});
+    // 2) 메뉴 아이템 단계: 주문한 메뉴 이름(예: '불고기버거')만 찾기
+    else if (currentStep === STEPS.MENU_ITEM && order.menu) {
+        activeTargets = [order.menu];  // '불고기버거'
+    }
 
-//  루프 끝난 뒤, 요약 메시지 출력
-ocrOutput.textContent = `인식 완료: 강조된 영역 ${matchedCount}개`;
+    words.forEach(word => {
+        const text = (word.text || '').trim();
 
+        if (activeTargets.some(target => text.includes(target))) {
+            matchedCount++;
 
+            const div = document.createElement('div');
+            div.className = 'ar-arrow';
+            div.style.position = 'absolute';
+
+            const scaleX = video.clientWidth / video.videoWidth;
+            const scaleY = video.clientHeight / video.videoHeight;
+
+            div.style.left = `${word.bbox.x0 * scaleX}px`;
+            div.style.top = `${word.bbox.y0 * scaleY}px`;
+            div.style.width = `${(word.bbox.x1 - word.bbox.x0) * scaleX}px`;
+            div.style.height = `${(word.bbox.y1 - word.bbox.y0) * scaleY}px`;
+            div.style.border = '2px solid red';
+            div.title = text;
+
+            arOverlay.appendChild(div);
+        }
+    });
+
+    ocrOutput.textContent = `인식 완료: 강조된 영역 ${matchedCount}개`;
 }
 
 // 7. 음성 인식 기능
@@ -259,26 +259,24 @@ if (SpeechRecognition) {
         if (compact.includes('세트')) detectedIsSet = true;
         else if (compact.includes('단품')) detectedIsSet = false;
 
-        switch (currentStep) {
-            // 아직 주문이 시작되지 않은 상태
+            switch (currentStep) {
+            // 1. 아직 주문이 시작되지 않은 상태
             case STEPS.IDLE: {
                 if (detectedMenu) {
-                    order.menu = detectedMenu;
-                    order.menuKeyword = detectedMenuKeyword;
-                    order.isSet = detectedIsSet; // 세트/단품 안 말했으면 null 유지
+                    order.menu = detectedMenu;        // 예: '불고기버거'
+                    order.isSet = detectedIsSet;      // true/false/null
                     currentStep = STEPS.MENU_CATEGORY;
-
+    
                     const typeText =
                         order.isSet === null
                             ? '(단품/세트 미정)'
                             : order.isSet
                             ? '세트'
                             : '단품';
-                    
+    
                     const msg = `▶ 주문 시작: 메뉴=${order.menu}, 종류=${typeText}, 현재 단계=${currentStep}`;
                     console.log(msg);
-                    console.log('현재 order 상태:', order);
-                    voiceOutput.textContent = voiceOutput.textContent + '\n' + msg;
+                    voiceOutput.textContent = msg;
                 } else {
                     const msg =
                         '어떤 메뉴를 주문하실지 잘 못 들었어요. "불고기버거 세트 하나"처럼 말해 주세요.';
@@ -287,8 +285,25 @@ if (SpeechRecognition) {
                 }
                 break;
             }
-
-            // 나중에 DESSERT, DRINK 등 단계별 처리를 여기에 추가 예정
+    
+            // 2. 버거 카테고리 화면에서 "다음 화면" 대기
+            case STEPS.MENU_CATEGORY: {
+                // "다음", "다음 화면" 같은 말이 들어가면
+                if (compact.includes('다음')) {
+                    currentStep = STEPS.MENU_ITEM;
+    
+                    const msg = `▶ 버거 메뉴 화면으로 이동했습니다. 이제 "${order.menu}" 글자를 강조할게요. 화면을 맞추고 스캔 버튼을 눌러 주세요. (현재 단계=${currentStep})`;
+                    console.log(msg);
+                    voiceOutput.textContent = msg;
+                } else {
+                    const msg = '버거 메뉴 화면으로 넘어가셨다면 "다음 화면"이라고 말씀해 주세요.';
+                    console.log(msg);
+                    voiceOutput.textContent = msg;
+                }
+                break;
+            }
+    
+            // 3. 그 외 단계 (아직 미구현)
             default: {
                 const msg = `현재 단계(${currentStep})에 대한 음성 처리는 아직 구현되지 않았습니다.`;
                 console.log(msg);
