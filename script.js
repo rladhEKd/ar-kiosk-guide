@@ -121,24 +121,39 @@ async function recognizeText() {
     // 이전 AR 오버레이 지우기
     arOverlay.innerHTML = '';
 
-    // 인식된 단어 위에 AR 화살표 표시
-    words.forEach(word => {
-        if (TARGET_WORDS.some(target => word.text.includes(target))) {
-            const div = document.createElement('div');
-            div.className = 'ar-arrow';
-            div.style.position = 'absolute';
-            // Bbox 좌표를 비디오 크기에 맞게 스케일링
-            const scaleX = video.clientWidth / video.videoWidth;
-            const scaleY = video.clientHeight / video.videoHeight;
-            div.style.left = `${word.bbox.x0 * scaleX}px`;
-            div.style.top = `${word.bbox.y0 * scaleY}px`;
-            div.style.width = `${(word.bbox.x1 - word.bbox.x0) * scaleX}px`;
-            div.style.height = `${(word.bbox.y1 - word.bbox.y0) * scaleY}px`;
-            div.style.border = '2px solid red';
-            div.title = word.text; // 마우스를 올리면 단어 표시
-            arOverlay.appendChild(div);
+        // 인식된 단어 위에 AR 화살표 표시
+        // 🔸 현재 주문 단계에 따라 타겟 단어를 달리함
+        let activeTargets = TARGET_WORDS;
+    
+        // 1단계: 메뉴 카테고리 선택 단계면 '버거'만 강조
+        if (currentStep === STEPS.MENU_CATEGORY) {
+            activeTargets = ['버거'];  // 나중에 '치킨', '디저트' 등 추가 가능
         }
-    });
+    
+        words.forEach(word => {
+            // 인식된 글자
+            const text = (word.text || '').trim();
+    
+            // 지금 단계에서 찾고 싶은 단어에 해당하면
+            if (activeTargets.some(target => text.includes(target))) {
+                const div = document.createElement('div');
+                div.className = 'ar-arrow';
+                div.style.position = 'absolute';
+    
+                // Bbox 좌표를 비디오 크기에 맞게 스케일링
+                const scaleX = video.clientWidth / video.videoWidth;
+                const scaleY = video.clientHeight / video.videoHeight;
+                div.style.left = `${word.bbox.x0 * scaleX}px`;
+                div.style.top = `${word.bbox.y0 * scaleY}px`;
+                div.style.width = `${(word.bbox.x1 - word.bbox.x0) * scaleX}px`;
+                div.style.height = `${(word.bbox.x1 - word.bbox.x0) * scaleX}px`;
+                div.style.border = '2px solid red';
+                div.title = text;
+    
+                arOverlay.appendChild(div);
+            }
+        });
+
 }
 
 // 7. 음성 인식 기능
