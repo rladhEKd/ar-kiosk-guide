@@ -72,3 +72,29 @@ button {
     transform: scale(1.05);
     background-color: rgba(255, 0, 0, 0.2);
 }
+
+/* 모바일(가로 768px 이하)에서 레이아웃 조정 */
+@media (max-width: 768px) {
+  body {
+    font-size: 16px;
+  }
+
+  /* 전체를 세로 방향으로 쌓기 */
+  .container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* 비디오/AR 영역은 화면 폭 꽉 채우기 */
+  #video, #ar-overlay {
+    width: 100%;
+    height: auto;
+  }
+
+  /* 버튼은 한 줄에 하나씩, 크게 */
+  button {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 16px;
+  }
+}
