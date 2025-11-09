@@ -127,14 +127,14 @@ arOverlay.innerHTML = '';
 
     // 인식된 단어 위에 AR 화살표 표시
     let activeTargets = TARGET_WORDS;
-
+    
     // 1) 카테고리 단계: '버거' 글씨만 찾기
     if (currentStep === STEPS.MENU_CATEGORY) {
         activeTargets = ['버거'];
     }
-    // 2) 메뉴 아이템 단계: 주문한 메뉴 이름(예: '불고기버거')만 찾기
-    else if (currentStep === STEPS.MENU_ITEM && order.menu) {
-        activeTargets = [order.menu];  // '불고기버거'
+    // 2) 메뉴 아이템 단계: 짧은 키워드(불고기/치즈/새우 등)로 찾기
+    else if (currentStep === STEPS.MENU_ITEM && order.menuKeyword) {
+        activeTargets = [order.menuKeyword];  // '불고기', '치즈', '새우' ...
     }
 
     words.forEach(word => {
@@ -264,6 +264,7 @@ if (SpeechRecognition) {
             case STEPS.IDLE: {
                 if (detectedMenu) {
                     order.menu = detectedMenu;        // 예: '불고기버거'
+                    order.menuKeyword = detectedMenuKeyword;
                     order.isSet = detectedIsSet;      // true/false/null
                     currentStep = STEPS.MENU_CATEGORY;
     
