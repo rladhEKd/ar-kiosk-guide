@@ -3,26 +3,31 @@ const TARGET_WORDS = ['버거', '음료', '주문', '결제'];
 
 // ===== 주문 단계(state) & 주문 정보 =====
 const STEPS = {
-    IDLE: 'IDLE',                 // 아무 것도 안 하는 기본 상태
-    MENU_CATEGORY: 'MENU_CATEGORY', // '버거' 탭 선택 단계
-    MENU_ITEM: 'MENU_ITEM',       // '불고기버거' 같은 구체 메뉴 선택
-    SET_OR_SINGLE: 'SET_OR_SINGLE', // 단품/세트 선택
-    DESSERT: 'DESSERT',           // 디저트 선택
-    DRINK: 'DRINK',               // 음료 선택
-    CONFIRM: 'CONFIRM',           // 최종 확인
+    IDLE: 'IDLE',
+    MENU_CATEGORY: 'MENU_CATEGORY',
+    MENU_ITEM: 'MENU_ITEM',
+    BUN: 'BUN',                  
+    SET_OR_SINGLE: 'SET_OR_SINGLE',
+    DESSERT: 'DESSERT',
+    DRINK: 'DRINK',
+    CONFIRM: 'CONFIRM',
 };
+
 
 let currentStep = STEPS.IDLE;
 
 const order = {
-    menu: null,          // 예: '리아 불고기버거' (kiosk-ui 실제 메뉴 이름)
-    menuKeyword: null,   // OCR에서 찾을 키워드 (예: '불고기')
-    isSet: null,         // true=세트, false=단품, null=미정
-    dessert: null,       // 예: '포테이토'
-    dessertKeyword: null,// OCR에서 찾을 키워드 (예: '포테이토')
-    drink: null,         // 예: '펩시콜라(R)'
-    drinkKeyword: null,  // OCR에서 찾을 키워드 (예: '펩시콜라')
+    menu: null,
+    menuKeyword: null,
+    isSet: null,
+    bun: null,           
+    bunKeyword: null,    // OCR에서 찾을 키워드 ('변경안함', '버터번')
+    dessert: null,
+    dessertKeyword: null,
+    drink: null,
+    drinkKeyword: null,
 };
+
 
 // --- 이하 코드는 가급적 수정하지 마세요. ---
 
@@ -157,6 +162,10 @@ async function recognizeText() {
     else if (currentStep === STEPS.MENU_ITEM && order.menuKeyword) {
         activeTargets = [order.menuKeyword];  // '불고기', '치즈', '새우' ...
     }
+    else if (currentStep === STEPS.BUN && order.bunKeyword) {
+        activeTargets = [order.bunKeyword];  // '변경안함' 또는 '버터번'
+    }
+
 
     words.forEach(word => {
         const text = (word.text || '').trim();
@@ -319,6 +328,42 @@ if (SpeechRecognition) {
                     voiceOutput.textContent = msg;
                 } else {
                     const msg = '버거 메뉴 화면으로 넘어가셨다면 "다음 화면"이라고 말씀해 주세요.';
+                    console.log(msg);
+                    voiceOutput.textContent = msg;
+                }
+                break;
+            }
+
+            case STEPS.MENU_ITEM: {
+                if (compact.includes('다음')) {
+                    currentStep = STEPS.BUN;
+                    const msg = `▶ "${order.menu}"를 선택하셨군요. 이제 빵 종류를 선택할 차례입니다. 화면에서 "변경안함" 또는 "버터번" 버튼이 보이게 맞추고 스캔 버튼을 눌러 주세요. (현재 단계=${currentStep})`;
+                    console.log(msg);
+                    voiceOutput.textContent = msg;
+                } else {
+                    const msg = `"다음 화면"이라고 말씀하시면 빵 선택 단계로 넘어갑니다.`;
+                    console.log(msg);
+                    voiceOutput.textContent = msg;
+                }
+                break;
+            }
+
+            case STEPS.BUN: {
+                if (compact.includes('기본') || compact.includes('변경안함')) {
+                    order.bun = '기본';
+                    order.bunKeyword = '변경안함';
+                } else if (compact.includes('버터')) {
+                    order.bun = '버터번';
+                    order.bunKeyword = '버터번';
+                }
+            
+                if (order.bun) {
+                    currentStep = STEPS.SET_OR_SINGLE;
+                    const msg = `▶ ${order.bun}으로 선택하셨습니다. 이제 단품/세트를 선택해 주세요. (현재 단계=${currentStep})`;
+                    console.log(msg);
+                    voiceOutput.textContent = msg;
+                } else {
+                    const msg = '빵 종류를 다시 말씀해 주세요. 예: "기본으로 할게요", "버터번으로 변경해 주세요".';
                     console.log(msg);
                     voiceOutput.textContent = msg;
                 }
