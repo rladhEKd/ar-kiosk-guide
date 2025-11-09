@@ -48,7 +48,9 @@ async function initializeTesseract() {
         worker = await Tesseract.createWorker('kor');
 
         await worker.setParameters({
-            tessedit_char_whitelist: '리아불고기버거데리새우핫크리스피치즈한우전주비빔라이스 0123456789',
+            tessedit_char_whitelist: 
+                '리아불고기버거데리새우핫크리스피치즈한우전주비빔라이스 0123456789',
+                '변경안함버터번단품세트디저트치킨음료커피포테이토콜라사이다',    
             tessedit_pageseg_mode: '6', // 일반 블록 텍스트(문장) 모드
         });
 
@@ -116,9 +118,13 @@ async function recognizeText() {
     ocrOutput.textContent = '텍스트를 인식 중입니다...';
 
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    const scaleForOCR = 2;  // 2배 확대
+    
+    canvas.width = video.videoWidth * scaleForOCR;
+    canvas.height = video.videoHeight * scaleForOCR;
+    
     const context = canvas.getContext('2d', { willReadFrequently: true });
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     // 1. 이미지 전처리 시작
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -182,8 +188,8 @@ async function recognizeText() {
             div.className = 'ar-arrow';
             div.style.position = 'absolute';
 
-            const scaleX = video.clientWidth / video.videoWidth;
-            const scaleY = video.clientHeight / video.videoHeight;
+            const scaleX = video.clientWidth / canvas.width;
+            const scaleY = video.clientHeight / canvas.height;
 
             div.style.left = `${word.bbox.x0 * scaleX}px`;
             div.style.top = `${word.bbox.y0 * scaleY}px`;
