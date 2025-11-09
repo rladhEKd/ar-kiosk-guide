@@ -41,6 +41,12 @@ async function initializeTesseract() {
     ocrOutput.textContent = 'OCR 엔진을 로딩 중입니다...';
     try {
         worker = await Tesseract.createWorker('kor');
+
+        await worker.setParameters({
+            tessedit_char_whitelist: '리아불고기버거데리새우핫크리스피치즈한우전주비빔라이스 0123456789',
+            tessedit_pageseg_mode: '6', // 일반 블록 텍스트(문장) 모드
+        });
+
         ocrOutput.textContent = 'OCR 엔진 로딩 완료. 카메라를 켜고 스캔 버튼을 누르세요.';
     } catch (error) {
         console.error('Tesseract.js v5 초기화 실패:', error);
@@ -115,25 +121,23 @@ async function recognizeText() {
     const data = imageData.data;
 
     for (let i = 0; i < data.length; i += 4) {
-        // 1) 기존처럼 그레이스케일
         const avg = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
     
-        // 2) 대비(컨트라스트) 조금 올리기
-        let enhanced = avg * 1.4;  // 1.2~1.6 사이에서 조절해봐도 좋음
+        // 살짝만 대비 올리기
+        let enhanced = avg * 1.2;
         if (enhanced > 255) enhanced = 255;
     
-        // 3) 임계값 기준으로 완전 까맣거나 완전 하얗게(이진화)
-        const threshold = 160; // 140~190 사이에서 조절 가능
-        const value = enhanced > threshold ? 255 : 0;
-    
-        data[i] = value;     // R
-        data[i + 1] = value; // G
-        data[i + 2] = value; // B
+        data[i] = enhanced;
+        data[i + 1] = enhanced;
+        data[i + 2] = enhanced;
     }
     context.putImageData(imageData, 0, 0);
     // 이미지 전처리 끝
 
     const { data: { text, words } } = await worker.recognize(canvas);
+
+    // 디버그용: 인식된 단어들을 한 번 출력해보자
+    console.log('OCR words:', words.map(w => w.text));
 
     // 이전 AR 오버레이 지우기
     arOverlay.innerHTML = '';
