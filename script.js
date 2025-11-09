@@ -15,10 +15,13 @@ const STEPS = {
 let currentStep = STEPS.IDLE;
 
 const order = {
-    menu: null,    // 예: '불고기버거'
-    isSet: null,   // true=세트, false=단품, null=미정
-    dessert: null, // 예: '감자튀김'
-    drink: null,   // 예: '콜라'
+    menu: null,          // 예: '리아 불고기버거' (kiosk-ui 실제 메뉴 이름)
+    menuKeyword: null,   // OCR에서 찾을 키워드 (예: '불고기')
+    isSet: null,         // true=세트, false=단품, null=미정
+    dessert: null,       // 예: '포테이토'
+    dessertKeyword: null,// OCR에서 찾을 키워드 (예: '포테이토')
+    drink: null,         // 예: '펩시콜라(R)'
+    drinkKeyword: null,  // OCR에서 찾을 키워드 (예: '펩시콜라')
 };
 
 // --- 이하 코드는 가급적 수정하지 마세요. ---
@@ -208,11 +211,48 @@ if (SpeechRecognition) {
         // 공백 제거 (예: "불고기버거 세트 하나" → "불고기버거세트하나")
         const compact = text.replace(/\s+/g, '');
 
-        // 1) 메뉴 감지
+        // 1) 메뉴 감지 (kiosk-ui 실제 메뉴 이름 기준)
         let detectedMenu = null;
-        if (compact.includes('불고기')) detectedMenu = '불고기버거';
-        else if (compact.includes('치즈')) detectedMenu = '치즈버거';
-        else if (compact.includes('새우')) detectedMenu = '새우버거';
+        let detectedMenuKeyword = null;
+        
+        // "리아 불고기버거"
+        if (compact.includes('불고기')) {
+            detectedMenu = '리아 불고기버거';
+            detectedMenuKeyword = '불고기';
+        }
+        // "한우 불고기버거"
+        else if (compact.includes('한우')) {
+            detectedMenu = '한우 불고기버거';
+            detectedMenuKeyword = '한우'; // 또는 '불고기'로 잡아도 됨
+        }
+        // "클래식 치즈버거" / "더블 클래식 치즈버거"
+        else if (compact.includes('더블')) {
+            detectedMenu = '더블 클래식 치즈버거';
+            detectedMenuKeyword = '더블';
+        } else if (compact.includes('치즈')) {
+            detectedMenu = '클래식 치즈버거';
+            detectedMenuKeyword = '치즈';
+        }
+        // "새우버거"
+        else if (compact.includes('새우')) {
+            detectedMenu = '새우버거';
+            detectedMenuKeyword = '새우';
+        }
+        // "데리버거"
+        else if (compact.includes('데리')) {
+            detectedMenu = '데리버거';
+            detectedMenuKeyword = '데리';
+        }
+        // "핫크리스피 치킨버거"
+        else if (compact.includes('핫크리스피') || compact.includes('매콤')) {
+            detectedMenu = '핫크리스피 치킨버거';
+            detectedMenuKeyword = '핫크리스피';
+        }
+        // "전주 비빔라이스버거"
+        else if (compact.includes('비빔') || compact.includes('라이스')) {
+            detectedMenu = '전주 비빔라이스버거';
+            detectedMenuKeyword = '비빔';
+        }
 
         // 2) 세트/단품 감지
         let detectedIsSet = null;
@@ -224,6 +264,7 @@ if (SpeechRecognition) {
             case STEPS.IDLE: {
                 if (detectedMenu) {
                     order.menu = detectedMenu;
+                    order.menuKeyword = detectedMenuKeyword;
                     order.isSet = detectedIsSet; // 세트/단품 안 말했으면 null 유지
                     currentStep = STEPS.MENU_CATEGORY;
 
@@ -233,9 +274,10 @@ if (SpeechRecognition) {
                             : order.isSet
                             ? '세트'
                             : '단품';
-
+                    
                     const msg = `▶ 주문 시작: 메뉴=${order.menu}, 종류=${typeText}, 현재 단계=${currentStep}`;
                     console.log(msg);
+                    console.log('현재 order 상태:', order);
                     voiceOutput.textContent = voiceOutput.textContent + '\n' + msg;
                 } else {
                     const msg =
