@@ -49,7 +49,7 @@ async function initializeTesseract() {
 
         await worker.setParameters({
             tessedit_char_whitelist: 
-                '리아불고기버거데리새우핫크리스피치즈한우전주비빔라이스 0123456789',
+                '리아불고기버거데리새우핫크리스피치즈한우전주비빔라이스 0123456789' +
                 '변경안함버터번단품세트디저트치킨음료커피포테이토콜라사이다',    
             tessedit_pageseg_mode: '6', // 일반 블록 텍스트(문장) 모드
         });
@@ -124,7 +124,6 @@ async function recognizeText() {
     canvas.height = video.videoHeight * scaleForOCR;
     
     const context = canvas.getContext('2d', { willReadFrequently: true });
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     // 1. 이미지 전처리 시작
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
