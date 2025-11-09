@@ -66,7 +66,13 @@ cameraButton.addEventListener('click', async () => {
     // 카메라 켜기
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: 'environment',
+                    width: { ideal: 1280 },   // 가능하면 1280x720 이상으로
+                    height: { ideal: 720 }
+                }
+            });
             video.srcObject = stream;
             video.play();
             cameraButton.textContent = '카메라 끄기';
@@ -109,19 +115,30 @@ async function recognizeText() {
     const data = imageData.data;
 
     for (let i = 0; i < data.length; i += 4) {
-        // 흑백 변환 (Luminosity-preserving)
+        // 1) 기존처럼 그레이스케일
         const avg = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
-        data[i] = avg; // red
-        data[i + 1] = avg; // green
-        data[i + 2] = avg; // blue
+    
+        // 2) 대비(컨트라스트) 조금 올리기
+        let enhanced = avg * 1.4;  // 1.2~1.6 사이에서 조절해봐도 좋음
+        if (enhanced > 255) enhanced = 255;
+    
+        // 3) 임계값 기준으로 완전 까맣거나 완전 하얗게(이진화)
+        const threshold = 160; // 140~190 사이에서 조절 가능
+        const value = enhanced > threshold ? 255 : 0;
+    
+        data[i] = value;     // R
+        data[i + 1] = value; // G
+        data[i + 2] = value; // B
     }
     context.putImageData(imageData, 0, 0);
     // 이미지 전처리 끝
 
     const { data: { text, words } } = await worker.recognize(canvas);
 
-// 이전 AR 오버레이 지우기
-arOverlay.innerHTML = '';
+    // 이전 AR 오버레이 지우기
+    arOverlay.innerHTML = '';
+
+    console.log(words.map(w => w.text));
 
     let matchedCount = 0;
 
