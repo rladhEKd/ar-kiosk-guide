@@ -154,16 +154,21 @@ async function recognizeText() {
     // 인식된 단어 위에 AR 화살표 표시
     let activeTargets = TARGET_WORDS;
     
-    // 1) 카테고리 단계: '버거' 글씨만 찾기
+    // 1) 카테고리 단계: '버거'
     if (currentStep === STEPS.MENU_CATEGORY) {
         activeTargets = ['버거'];
     }
-    // 2) 메뉴 아이템 단계: 짧은 키워드(불고기/치즈/새우 등)로 찾기
+    // 2) 메뉴 아이템 단계: 메뉴 키워드
     else if (currentStep === STEPS.MENU_ITEM && order.menuKeyword) {
-        activeTargets = [order.menuKeyword];  // '불고기', '치즈', '새우' ...
+        activeTargets = [order.menuKeyword];
     }
+    // 3) 빵 선택 단계: '변경안함' 또는 '버터번'
     else if (currentStep === STEPS.BUN && order.bunKeyword) {
-        activeTargets = [order.bunKeyword];  // '변경안함' 또는 '버터번'
+        activeTargets = [order.bunKeyword];   // '변경안함' 또는 '버터번'
+    }
+    // 4) 세트/단품 단계
+    else if (currentStep === STEPS.SET_OR_SINGLE && order.isSet !== null) {
+        activeTargets = order.isSet ? ['세트'] : ['단품'];
     }
 
 
@@ -247,25 +252,25 @@ if (SpeechRecognition) {
         
         // "리아 불고기버거"
         if (compact.includes('불고기')) {
-            detectedMenu = '리아 불고기버거';
+            detectedMenu = '리아불고기';
             detectedMenuKeyword = '불고기';
         }
-        // "한우 불고기버거"
+        // "한우불고기버거"
         else if (compact.includes('한우')) {
-            detectedMenu = '한우 불고기버거';
+            detectedMenu = '한우불고기버거';
             detectedMenuKeyword = '한우'; // 또는 '불고기'로 잡아도 됨
         }
         // "클래식 치즈버거" / "더블 클래식 치즈버거"
         else if (compact.includes('더블')) {
-            detectedMenu = '더블 클래식 치즈버거';
+            detectedMenu = '더블클래식치즈버거';
             detectedMenuKeyword = '더블';
         } else if (compact.includes('치즈')) {
-            detectedMenu = '클래식 치즈버거';
+            detectedMenu = '클래식치즈버거';
             detectedMenuKeyword = '치즈';
         }
         // "새우버거"
         else if (compact.includes('새우')) {
-            detectedMenu = '새우버거';
+            detectedMenu = '리아새우';
             detectedMenuKeyword = '새우';
         }
         // "데리버거"
@@ -275,12 +280,12 @@ if (SpeechRecognition) {
         }
         // "핫크리스피 치킨버거"
         else if (compact.includes('핫크리스피') || compact.includes('매콤')) {
-            detectedMenu = '핫크리스피 치킨버거';
+            detectedMenu = '핫크리스피치킨버거';
             detectedMenuKeyword = '핫크리스피';
         }
         // "전주 비빔라이스버거"
         else if (compact.includes('비빔') || compact.includes('라이스')) {
-            detectedMenu = '전주 비빔라이스버거';
+            detectedMenu = '전주비빔라이스버거';
             detectedMenuKeyword = '비빔';
         }
 
@@ -358,12 +363,16 @@ if (SpeechRecognition) {
                 }
             
                 if (order.bun) {
-                    currentStep = STEPS.SET_OR_SINGLE;
-                    const msg = `▶ ${order.bun}으로 선택하셨습니다. 이제 단품/세트를 선택해 주세요. (현재 단계=${currentStep})`;
+                    //  단계는 그대로 BUN에 두고, 빵 버튼을 스캔으로 강조하도록 안내
+                    const msg =
+                        `▶ ${order.bun}으로 선택하셨습니다. ` +
+                        `화면에서 "${order.bunKeyword}" 버튼이 보이게 맞추고 스캔 버튼을 눌러 주세요. ` +
+                        `(현재 단계=${currentStep})`;
                     console.log(msg);
                     voiceOutput.textContent = msg;
                 } else {
-                    const msg = '빵 종류를 다시 말씀해 주세요. 예: "기본으로 할게요", "버터번으로 변경해 주세요".';
+                    const msg =
+                        '빵 종류를 다시 말씀해 주세요. 예: "기본으로 할게요", "버터번으로 변경해 주세요".';
                     console.log(msg);
                     voiceOutput.textContent = msg;
                 }
